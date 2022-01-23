@@ -4,6 +4,7 @@ const router = express.Router();
 const bodyParser = express.json();
 const TourdatesService = require("./tourdates-service");
 const ArchiveService = require("./archive-service");
+const NewsService = require("./news-service");
 router.use(bodyParser);
 
 const serializeArchiveDate = (archiveDate) => ({
@@ -14,6 +15,15 @@ const serializeArchiveDate = (archiveDate) => ({
   setlist: archiveDate.setlist,
   video: archiveDate.video,
   images: archiveDate.images,
+});
+
+const serializeNewsItem = (newsItem) => ({
+  id: newsItem.id,
+  month: newsItem.month,
+  date: newsItem.date,
+  year: newsItem.year,
+  title: newsItem.title,
+  content: newsItem.content
 });
 
 router.route("/home").get((req, res) => {
@@ -35,6 +45,38 @@ router.route("/releases").get((req, res) => {
 router.route("/store").get((req, res) => {
   res.status(200).send("Here is some stuff to buy");
 });
+
+router.route("/news").get((req, res, next) => {
+  const knexInstance = req.app.get("db");
+  NewsService.getAllNews(knexInstance)
+    .then((news) => {
+      res.json(news.map(serializeNewsItem));
+    })
+    .catch(next);
+});
+
+router.route("/latestnews").get((req, res, next) => {
+  const knexInstance = req.app.get("db");
+  NewsService.getLatestNews(knexInstance)
+    .then((news) => {
+      res.json(news.map(serializeNewsItem));
+    })
+    .catch(next);
+});
+
+router.route("/article/:article_id")
+  .get((req, res, next) => {
+    const { article_id } = req.params;
+    NewsService.getById(req.app.get("db"), article_id).then((article) => {
+      if (!article) {
+        return res.status(404).json({
+          error: { message: `Article not found` },
+        });
+      }
+      res.json(serializeNewsItem(article)).catch(next);
+    });
+  })
+
 
 router.route("/tour").get((req, res, next) => {
   const knexInstance = req.app.get("db");
